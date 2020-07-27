@@ -1,4 +1,4 @@
-classdef floodfill
+classdef floodfillOld
     properties
         emg % Ephys object
         sigma % Standard deviation across each channel 
@@ -13,7 +13,7 @@ classdef floodfill
     
     methods
        
-        function obj = floodfill(emg, sigma, adj, varargin)
+        function obj = floodfillOld(emg, sigma, adj, varargin)
             p = inputParser; 
             
             % Set up mandatory inputs
