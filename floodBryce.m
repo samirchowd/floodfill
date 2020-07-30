@@ -1,7 +1,20 @@
 % Instantiate EMG data
 % Set weighting factor for spk times >> p (See Rossant 2016) 
 % Set strong and weak threshhold crossing parameters 
-
+%%
+function spk = floodBryce
+    emg = load('emg');
+    sigma = load('sigma');
+    adj = load('adj');
+    emg = emg.emg;
+    sigma = sigma.sigma;
+    adj = adj.adj;
+    p = 1;
+    weak = 2*sigma;
+    strong = 4*sigma;
+    spk = detectSpk(emg, adj, p, weak, strong)
+end
+%%
 % Find positive strong threshold crossings 
 % >> find(diff(sign(x-threshold)) > 0) >> ix   
 
@@ -23,15 +36,7 @@
 % >> spk{1}(end+1) = sum((spk_wt(1,:).*spk_wt(2,:)).^p)/sum(spk_wt(2,:)).^p
 % >> spk{2}{end+1} = spk_loc
 
-
-
-
-function floodBryce
-    
-    detectSpk(emg, p, weak, strong)
-end
-
-function spk = detectSpk(emg, p, weak, strong)
+function spk = detectSpk(emg, adj, p, weak, strong)
     % Function for detecting spikes on Ephys data
     
     % Finding indicies of positive threshold crossings 
@@ -48,12 +53,12 @@ function spk = detectSpk(emg, p, weak, strong)
        for j = 1:size(ix{i}, 1) % Through each crossing 
            t = ix{i}(j); % Storing current index position
            if(~res_bin(t,i))
-               res_bin(t,i) = 1;
+               % res_bin(t,i) = 1;
                psiVal  = psiG(emg.data, t, i, weak, strong);
                spk_wt = [t psiVal];
                spk_loc = [t i];
-               [spk_wt, spk_loc, res_bin] = floodfll(data, t, c, weak, spk_wt, spk_loc, res_bin);
-               spk{1}(end+1) = sum((spk_wt(1,:).*spk_wt(2,:)).^p)/sum(spk_wt(2,:)).^p;
+               [spk_wt, spk_loc, res_bin] = floodfill(emg.data, adj, t, i, weak, strong, spk_wt, spk_loc, res_bin);
+               spk{1}(end+1) = sum((spk_wt(:,1).*spk_wt(:,2)).^p)/sum(spk_wt(:,2)).^p;
                spk{2}{end+1} = spk_loc;
            
            end
@@ -82,22 +87,32 @@ end
 % >> if ~res_bin(t-1, c)
 % >> >> Call function on (t-1, c, spk_wt) 
 
-function [spk_wt, spk_loc, res_bin] = floodfill(data, adj, t, c, weak,strong, spk_wt, spk_loc, res_bin)
+function [spk_wt, spk_loc, res_bin] = floodfill(data, adj, t, c, weak, strong, spk_wt, spk_loc, res_bin)
     % Function that performs the floodfill algorithm on a given time point
-
-    % If the point crosses weak and has not been checked before
-    if(data(t,c) > weak && ~res_bin(t,c))
-        psiVal = psiG(data, t, c, strong);
-        spk_wt(end+1, :) = [t psiVal];
-        spk_loc(end+1, :) = [t,c];
+    
+    % Base cases
+    if(t < 0 || c < 0 || t > size(data,1) || c > size(data,2))
+       return; 
     end
+    
+    if(data(t,c) <= weak(c) || res_bin(t,c))
+        return; 
+    end
+    
+    % If the point crosses weak and has not been checked before
+    %if(data(t,c) > weak(c) && ~res_bin(t,c))
+    psiVal = psiG(data, t, c, weak(c), strong(c));
+    spk_wt(end+1, :) = [t psiVal];
+    spk_loc(end+1, :) = [t,c];
+    
     res_bin(t,c) = 1; 
     
     % Iterating through adjacent channels
     for i = 1:size(adj,1)
        if(adj(i,1) == c)
-          if(~res_bin(t,i))
-            [spk_wt, spk_loc, res_bin] = floodfill(data, adj, t, i, weak, strong, spk_wt, spk_loc, res_bin);
+          chanNo = adj(i,2);
+          if(~res_bin(t,chanNo))
+            [spk_wt, spk_loc, res_bin] = floodfill(data, adj, t, chanNo, weak, strong, spk_wt, spk_loc, res_bin);
           end
        end
     end
@@ -106,7 +121,7 @@ function [spk_wt, spk_loc, res_bin] = floodfill(data, adj, t, c, weak,strong, sp
     if(~res_bin(t+1,c))
         [spk_wt, spk_loc, res_bin] = floodfill(data, adj, t+1, c, weak, strong, spk_wt, spk_loc, res_bin);
     end
-    if(~res_bin(t+1,c))
+    if(~res_bin(t-1,c))
         [spk_wt, spk_loc, res_bin] = floodfill(data, adj, t-1, c, weak, strong, spk_wt, spk_loc, res_bin);
     end
 end
@@ -114,7 +129,15 @@ end
 
 function x = psiG(data,t,c,weak,strong)
     % Function to calculate voltage weighted values (Rossant 2016)
-    x = min((-data(t,c) - weak / (strong - weak)), 1);
+    x = min(((-data(t,c) - weak) / (strong - weak)), 1);
+end
+
+function plotData()
+    
+end 
+
+function plotSpks(data, spk, weak, strong)
+    
 end
 
 
