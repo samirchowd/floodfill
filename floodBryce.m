@@ -12,6 +12,7 @@ function spk = floodBryce
     p = 1;
     weak = 2*sigma;
     strong = 4*sigma;
+    %f = plotData(emg);
     spk = detectSpk(emg, adj, p, weak, strong)
 end
 %%
@@ -57,10 +58,12 @@ function spk = detectSpk(emg, adj, p, weak, strong)
                psiVal  = psiG(emg.data, t, i, weak, strong);
                spk_wt = [t psiVal];
                spk_loc = [t i];
+               %spk_wt = [];
+               %spk_loc = [];
                [spk_wt, spk_loc, res_bin] = floodfill(emg.data, adj, t, i, weak, strong, spk_wt, spk_loc, res_bin);
                spk{1}(end+1) = sum((spk_wt(:,1).*spk_wt(:,2)).^p)/sum(spk_wt(:,2)).^p;
                spk{2}{end+1} = spk_loc;
-           
+            
            end
        end
     end
@@ -132,12 +135,60 @@ function x = psiG(data,t,c,weak,strong)
     x = min(((-data(t,c) - weak) / (strong - weak)), 1);
 end
 
-function plotData()
+function f = plotData(emg, weak, strong)
+    f = axes();
+    hold on;
+    
+    Y_PAD = 0; 
+    Y_TICK = 1/2;
+    
+    % Normalizing the waveforms 
+    yAbsLim = max(abs(emg.data),[],1);
+    ws = bsxfun(@rdivide, emg.data, yAbsLim);
+    stn = bsxfun(@rdivide, strong, yAbsLim);
+    wen = bsxfun(@rdivide, weak, yAbsLim);
+    
+    % Applying a verticle offset to each channel
+    yPos = flipud([0;cumsum((1+Y_PAD)*2*ones(emg.nChannels-1,1))]);
+    ws = ws + yPos';
+    stn = stn + yPos';
+    wen = wen + yPos';
+    
+    % y-tick position and values
+    yTickVal = Y_TICK;
+    yTickPos = [yPos-yTickVal, yPos, yPos+fliplr(yTickVal)];
+    yTick = round((yTickPos - yPos).*yAbsLim(:));
+    
+    yTickPos = reshape(fliplr(yTickPos)',(1+2*length(yTickVal))*emg.nChannels,1);
+    yTick = reshape(fliplr(yTick)',(1+2*length(yTickVal))*emg.nChannels,1);
+    
+    yTickPos = flipud(yTickPos);
+    yTickLabel = cellfun(@num2str,flipud(num2cell(yTick)),'uni',false);
+    
+    % Plot
+    
+    for ii = 1:size(ws,2)
+        plot(f,ws(:,ii))
+        plot([0,size(ws,1)],[stn(ii),stn(ii)])
+        plot([0,size(ws,1)],[wen(ii),wen(ii)])
+    end
+    drawnow
+
+    set(f,'yTick',yTickPos)
+    set(f,'yTickLabel',yTickLabel)
+
+    yl = [-1 1+2*(emg.nChannels-1)];
+    set(f,'yLim',yl)
+    %set(f,'xLim',[min(emg.time) max(emg.time)]);
     
 end 
 
-function plotSpks(data, spk, weak, strong)
+function f = plotSpks(data, spk, weak, strong)
     
+    % Create axis holding the data
+    f = plotData(data, weak, strong);
+    
+
 end
 
 
