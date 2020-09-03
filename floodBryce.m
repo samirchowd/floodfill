@@ -19,6 +19,8 @@ function wav = floodBryce
     wav = getWaves(emg.data, spk, 30);
     
     % Plotting data 
+    % plotSpks(emg, spk, weak, strong);
+    plotWave(wav, 155, strong, weak, spk, 30)
 end
 %%
 
@@ -140,82 +142,34 @@ function wav = getWaves(data, spk, wavedur)
         channels = unique(spk{2}{i}(:,2)); % Grabbing unique channels
         center = round(spkCenters(i));  
         wav = cat(3, wav, data(center-wavedur:center+wavedur,:));
-%         for j = 1:size(wav, 2)
-%            if(~ismember(j, channels))
-%               wav(:,j,i) = randn();
-%            end
-%         end
+        % Deviating from Rossant
+        % Replace all values outside of the actual spike with scaled noise.
+        % Only values in the spike range should be the actual value
+        % (whether or not it crosses the threshold)
+        % For multichannel spikes, use time range for each channel (not
+        % total time range). 
+        
+        % After noise has been inserted, obtain pca for each channel across
+        % all waveform (take first three components). Cluster that 
+        
+        for j = 1:size(wav, 2)
+           if(~ismember(j, channels))
+               % Calculate the stddev on chan for timewindow
+               % Scale randn within that stddev
+               % Replace channel with that size of noise 
+               dataOnChan = data(center-wavedur:center+wavedur, j);
+               avg = mean(dataOnChan);
+               stdev = std(dataOnChan);
+               noise = (stdev.*randn(wavedur*2 + 1,1) + avg);
+               wav(:,j,i) = 0;
+           end
+        end
     end
     
     
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%% Data Visualization %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-function f = plotWave(wav, spkNo, strong, weak, spk, wavdur)
-    % Function plots the waveform of a given spike across all channels
-    wav = wav(:,:,spkNo);
-    
-    f = axes();
-    hold on;
-    
-    Y_PAD = 0; 
-    Y_TICK = 1/2;
-    
-    nChannels = size(wav,2);
-    
-    % Normalizing the waveforms 
-    yAbsLim = max(abs(wav),[],1);
-    ws = bsxfun(@rdivide, wav, yAbsLim);
-    
-    % Normalizing strong and weak values
-    stn = bsxfun(@rdivide, strong, yAbsLim);
-    wen = bsxfun(@rdivide, weak, yAbsLim);
-    
-    % Applying a verticle offset to each channel and thresholds
-    yPos = flipud([0;cumsum((1+Y_PAD)*2*ones(nChannels-1,1))]);
-    ws = ws + yPos';
-    stn = stn + yPos';
-    wen = wen + yPos';
-
-    % y-tick position and values
-    yTickVal = Y_TICK;
-    yTickPos = [yPos-yTickVal, yPos, yPos+fliplr(yTickVal)];
-    yTick = round((yTickPos - yPos).*yAbsLim(:));
-    
-    yTickPos = reshape(fliplr(yTickPos)',(1+2*length(yTickVal))*nChannels,1);
-    yTick = reshape(fliplr(yTick)',(1+2*length(yTickVal))*nChannels,1);
-    
-    yTickPos = flipud(yTickPos);
-    yTickLabel = cellfun(@num2str,flipud(num2cell(yTick)),'uni',false);
-    
-    % Plot
-    
-    for ii = 1:size(ws,2)
-        plot(f,ws(:,ii))
-        plot([0,size(ws,1)],[stn(ii),stn(ii)])
-        plot([0,size(ws,1)],[wen(ii),wen(ii)])
-    end
-
-    set(f,'yTick',yTickPos)
-    set(f,'yTickLabel',yTickLabel)
-
-    yl = [-1 1+2*(nChannels-1)];
-    set(f,'yLim',yl)
-    %set(f,'xLim',[min(emg.time) max(emg.time)]); % Convert x-axis to time
-    
-    % Plotting the spk center
-    spkCenter = round(spk{1}(spkNo));
-    center = spkCenter - spkCenter + wavdur;
-    chan = spk{2}{spkNo}(1,2);
-    scatter(center, ws(center, chan), 500, 'x');
-       
-    % Plotting the points
-    points = [spk{2}{spkNo}(:,1) , spk{2}{spkNo}(:,2)];
-    points(:,1) = points(:,1) - spkCenter + wavdur + 1;
-    scatter(points(:,1), ws(sub2ind(size(ws), points(:,1), points(:,2))), 100, '.')
-    
-end
 
 function f = plotData(emg, weak, strong)
     % Function used to plot the data as well as weak and strong values
@@ -306,6 +260,71 @@ function f = plotSpks(emg, spk, weak, strong)
 
 end
 
+function f = plotWave(wav, spkNo, strong, weak, spk, wavdur)
+    % Function plots the waveform of a given spike across all channels
+    wav = wav(:,:,spkNo);
+    
+    f = axes();
+    hold on;
+    
+    Y_PAD = 0; 
+    Y_TICK = 1/2;
+    
+    nChannels = size(wav,2);
+    
+    % Normalizing the waveforms 
+    yAbsLim = max(abs(wav),[],1);
+    ws = bsxfun(@rdivide, wav, yAbsLim);
+    
+    % Normalizing strong and weak values
+    stn = bsxfun(@rdivide, strong, yAbsLim);
+    wen = bsxfun(@rdivide, weak, yAbsLim);
+    
+    % Applying a verticle offset to each channel and thresholds
+    yPos = flipud([0;cumsum((1+Y_PAD)*2*ones(nChannels-1,1))]);
+    ws = ws + yPos';
+    stn = stn + yPos';
+    wen = wen + yPos';
+
+    % y-tick position and values
+    yTickVal = Y_TICK;
+    yTickPos = [yPos-yTickVal, yPos, yPos+fliplr(yTickVal)];
+    yTick = round((yTickPos - yPos).*yAbsLim(:));
+    
+    yTickPos = reshape(fliplr(yTickPos)',(1+2*length(yTickVal))*nChannels,1);
+    yTick = reshape(fliplr(yTick)',(1+2*length(yTickVal))*nChannels,1);
+    
+    yTickPos = flipud(yTickPos);
+    yTickLabel = cellfun(@num2str,flipud(num2cell(yTick)),'uni',false);
+    
+    % Plot
+    
+    for ii = 1:size(ws,2)
+        plot(f,ws(:,ii))
+        plot([0,size(ws,1)],[stn(ii),stn(ii)])
+        plot([0,size(ws,1)],[wen(ii),wen(ii)])
+    end
+
+    set(f,'yTick',yTickPos)
+    set(f,'yTickLabel',yTickLabel)
+
+    yl = [-1 1+2*(nChannels-1)];
+    set(f,'yLim',yl)
+    %set(f,'xLim',[min(emg.time) max(emg.time)]); % Convert x-axis to time
+    
+    % Plotting the spk center
+    spkCenter = round(spk{1}(spkNo));
+    center = spkCenter - spkCenter + wavdur;
+    chan = spk{2}{spkNo}(1,2);
+    scatter(center, ws(center, chan), 500, 'x');
+       
+    % Plotting the points
+    points = [spk{2}{spkNo}(:,1) , spk{2}{spkNo}(:,2)];
+    points(:,1) = points(:,1) - spkCenter + wavdur + 1;
+    scatter(points(:,1), ws(sub2ind(size(ws), points(:,1), points(:,2))), 100, '.')
+    
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%% Psuedo Code %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Instantiate EMG data
 % Set weighting factor for spk times >> p (See Rossant 2016) 
@@ -377,7 +396,7 @@ end
 % Following slides? A block 
 
 
-
+% Try to end up with a 3 (pca components) x channel x spikes to cluster on
 
 
 
