@@ -1,14 +1,15 @@
 %%
-function wav = floodBryce
+function [wav,spk] = floodBryce
 
     % Loading data and instantiating objects 
     emg = load('emg');
-    sigma = load('sigma');
+    sigma = load('sigmaBig');
     adj = load('adj');
     emg = emg.emg;
-    sigma = sigma.sigma;
+    sigma = sigma.sigmaBig;
     adj = adj.adj;
     
+    emg.data = emg.data();
     % Setting parameters 
     p = 1;
     weak = 2*sigma;
@@ -17,10 +18,9 @@ function wav = floodBryce
     % Performing algorithm and extracting templates 
     spk = detectSpk(emg, adj, p, weak, strong);
     wav = getWaves(emg.data, spk, 30);
-    
-    % Plotting data 
-    % plotSpks(emg, spk, weak, strong);
-    plotWave(wav, 155, strong, weak, spk, 30)
+    %wav = permute(wav, [2,1,3]);
+    %plotSpks(emg, spk, weak, strong);
+    plotWave(wav, 123, strong, weak, spk, 30)
 end
 %%
 
@@ -161,7 +161,11 @@ function wav = getWaves(data, spk, wavedur)
                avg = mean(dataOnChan);
                stdev = std(dataOnChan);
                noise = (stdev.*randn(wavedur*2 + 1,1) + avg);
-               wav(:,j,i) = 0;
+               wav(:,j,i) = noise./10;
+               % Is there a way to add structured noise (gaussian is eh) 
+               % Fourier Analysis on noise channels, can we use that
+               % fourier analysis to generate replacement noise?
+               % Discuss it later, think about only noise segments 
            end
         end
     end
@@ -210,9 +214,9 @@ function f = plotData(emg, weak, strong)
     % Plot
     
     for ii = 1:size(ws,2)
-        plot(f,ws(:,ii))
-        plot([0,size(ws,1)],[stn(ii),stn(ii)])
-        plot([0,size(ws,1)],[wen(ii),wen(ii)])
+        plot(f,ws(:,ii),'k')
+        plot([0,size(ws,1)],[stn(ii),stn(ii)],'-r')
+        plot([0,size(ws,1)],[wen(ii),wen(ii)],'-g')
     end
 
     set(f,'yTick',yTickPos)
@@ -267,13 +271,14 @@ function f = plotWave(wav, spkNo, strong, weak, spk, wavdur)
     f = axes();
     hold on;
     
-    Y_PAD = 0; 
+    Y_PAD = 0.5; 
     Y_TICK = 1/2;
     
     nChannels = size(wav,2);
     
     % Normalizing the waveforms 
     yAbsLim = max(abs(wav),[],1);
+    yAbsLim =  reshape(ones(nChannels,1)*max(max(abs(wav))),1, nChannels);
     ws = bsxfun(@rdivide, wav, yAbsLim);
     
     % Normalizing strong and weak values
@@ -300,9 +305,9 @@ function f = plotWave(wav, spkNo, strong, weak, spk, wavdur)
     % Plot
     
     for ii = 1:size(ws,2)
-        plot(f,ws(:,ii))
-        plot([0,size(ws,1)],[stn(ii),stn(ii)])
-        plot([0,size(ws,1)],[wen(ii),wen(ii)])
+        plot(f,ws(:,ii),'k')
+        plot([0,size(ws,1)],[stn(ii),stn(ii)],'--r')
+        plot([0,size(ws,1)],[wen(ii),wen(ii)],'--g')
     end
 
     set(f,'yTick',yTickPos)
