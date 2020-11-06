@@ -1,31 +1,26 @@
 %%
-function [wav,spk] = floodBryce
+function [spk,wav] = floodBryce(data) 
 
     % Loading data and instantiating objects 
-    emg = load('emg');
-    sigma = load('sigmaBig');
     adj = load('adj');
-    emg = emg.emg;
-    sigma = sigma.sigmaBig;
     adj = adj.adj;
-    
-    emg.data = emg.data();
-    % Setting parameters 
+    % Setting parameters
+    sigma = median(abs(data))/0.6745;
     p = 1;
     weak = 2*sigma;
     strong = 4*sigma;
     
     % Performing algorithm and extracting templates 
-    spk = detectSpk(emg, adj, p, weak, strong);
-    wav = getWaves(emg.data, spk, 30);
+    spk = detectSpk(data, adj, p, weak, strong);
+    wav = getWaves(data, spk, 30);
     %wav = permute(wav, [2,1,3]);
     %plotSpks(emg, spk, weak, strong);
-    plotWave(wav, 123, strong, weak, spk, 30)
+    % plotWave(wav, 123, strong, weak, spk, 30)
 end
 %%
 
 %%%%%%%%%%%%%%%%%%%%%%%% Spike Detection %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function spk = detectSpk(emg, adj, p, weak, strong)
+function spk = detectSpk(data, adj, p, weak, strong)
     % Function for detecting spikes on Ephys data utlizing the floodfill
     % algorithm
     
@@ -40,12 +35,12 @@ function spk = detectSpk(emg, adj, p, weak, strong)
     % 1xN cell 
     
     % Finding indicies of positive threshold crossings 
-    ix = diff(sign(emg.data - strong)) > 0; 
+    ix = diff(sign(data - strong)) > 0; 
     ix = num2cell(ix, 1);
     ix = cellfun(@(x) find(x==1), ix, 'UniformOutput', false);
     
     % Instantiating binary array and final spks
-    res_bin = false(size(emg.data));
+    res_bin = false(size(data));
     spk = cell(1,2);
     
     % Iterating through all the positive threshold crossings
@@ -59,7 +54,7 @@ function spk = detectSpk(emg, adj, p, weak, strong)
                
                % Call floodfill on the point shifted 1 to the right (the
                % actual strong crossing).
-               [spk_wt, spk_loc, res_bin] = floodfill(emg.data, adj, t+1, i, weak, strong, spk_wt, spk_loc, res_bin);
+               [spk_wt, spk_loc, res_bin] = floodfill(data, adj, t+1, i, weak, strong, spk_wt, spk_loc, res_bin);
                
                % Append spk_wt and spk_loc to the spk matrix
                spk{1}(end+1) = sum((spk_wt(:,1).*spk_wt(:,2)).^p)/sum(spk_wt(:,2)).^p;
