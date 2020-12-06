@@ -13,9 +13,6 @@ function [spk,wav] = floodBryce(data)
     % Performing algorithm and extracting templates 
     spk = detectSpk(data, adj, p, weak, strong);
     wav = getWaves(data, spk, 30);
-    %wav = permute(wav, [2,1,3]);
-    %plotSpks(emg, spk, weak, strong);
-    % plotWave(wav, 123, strong, weak, spk, 30)
 end
 %%
 
@@ -170,9 +167,9 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%% Data Visualization %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function f = plotData(emg, weak, strong)
+function f = plotData(data, weak, strong)
     % Function used to plot the data as well as weak and strong values
-    % INPUTS: emg (Ephys) object, weak and strong threshold values
+    % INPUTS: data matrix, weak and strong threshold values
     % OUTPUT: A graph of data on each channel on a singular plot
     
     f = axes();
@@ -181,16 +178,18 @@ function f = plotData(emg, weak, strong)
     Y_PAD = 0; 
     Y_TICK = 1/2;
     
+    nChannels = size(data,2);
+    
     % Normalizing the waveforms 
-    yAbsLim = max(abs(emg.data),[],1);
-    ws = bsxfun(@rdivide, emg.data, yAbsLim);
+    yAbsLim = max(abs(data),[],1);
+    ws = bsxfun(@rdivide, data, yAbsLim);
     
     % Normalizing strong and weak values
     stn = bsxfun(@rdivide, strong, yAbsLim);
     wen = bsxfun(@rdivide, weak, yAbsLim);
     
     % Applying a verticle offset to each channel and thresholds
-    yPos = flipud([0;cumsum((1+Y_PAD)*2*ones(emg.nChannels-1,1))]);
+    yPos = flipud([0;cumsum((1+Y_PAD)*2*ones(nChannels-1,1))]);
     ws = ws + yPos';
     stn = stn + yPos';
     wen = wen + yPos';
@@ -200,8 +199,8 @@ function f = plotData(emg, weak, strong)
     yTickPos = [yPos-yTickVal, yPos, yPos+fliplr(yTickVal)];
     yTick = round((yTickPos - yPos).*yAbsLim(:));
     
-    yTickPos = reshape(fliplr(yTickPos)',(1+2*length(yTickVal))*emg.nChannels,1);
-    yTick = reshape(fliplr(yTick)',(1+2*length(yTickVal))*emg.nChannels,1);
+    yTickPos = reshape(fliplr(yTickPos)',(1+2*length(yTickVal))*nChannels,1);
+    yTick = reshape(fliplr(yTick)',(1+2*length(yTickVal))*nChannels,1);
     
     yTickPos = flipud(yTickPos);
     yTickLabel = cellfun(@num2str,flipud(num2cell(yTick)),'uni',false);
@@ -217,27 +216,29 @@ function f = plotData(emg, weak, strong)
     set(f,'yTick',yTickPos)
     set(f,'yTickLabel',yTickLabel)
 
-    yl = [-1 1+2*(emg.nChannels-1)];
+    yl = [-1 1+2*(nChannels-1)];
     set(f,'yLim',yl)
     %set(f,'xLim',[min(emg.time) max(emg.time)]); % Converts x-axis to time
 end 
 
-function f = plotSpks(emg, spk, weak, strong)
+function f = plotSpks(data, spk, weak, strong)
     % Function used to plot the detected spks
     % INPUTS: Emg (Ephys) object, spk cell, weak and strong thresholds
     % OUTPUT: A graph containing the data and the spks detected 
     
+    nChannels = size(data,2);
+    
     % Create axis holding the data
-    f = plotData(emg, weak, strong);
+    f = plotData(data, weak, strong);
     Y_PAD = 0;
     
     % Getting shifted data
     % Normalizing the waveforms 
-    yAbsLim = max(abs(emg.data),[],1);
-    ws = bsxfun(@rdivide, emg.data, yAbsLim);
+    yAbsLim = max(abs(data),[],1);
+    ws = bsxfun(@rdivide, data, yAbsLim);
     
     % Applying a verticle offset to each channel and thresholds
-    yPos = flipud([0;cumsum((1+Y_PAD)*2*ones(emg.nChannels-1,1))]);
+    yPos = flipud([0;cumsum((1+Y_PAD)*2*ones(nChannels-1,1))]);
     ws = ws + yPos';
     
     % NOTE: Change the for loop to work on the entire data set rather than
@@ -325,80 +326,22 @@ function f = plotWave(wav, spkNo, strong, weak, spk, wavdur)
     
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%% Psuedo Code %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Instantiate EMG data
-% Set weighting factor for spk times >> p (See Rossant 2016) 
-% Set strong and weak threshhold crossing parameters 
-
-% Find positive strong threshold crossings 
-% >> find(diff(sign(x-threshold)) > 0) >> ix   
-
-% Instantiate a binary false valued  matrix, same size as the EMG data >> res_bin 
-% Instantiate spk cell array >> spk = {{[1 x N spikes]} {N arrays of data coordinates}} 
-
-% Iterate through all positive threshold crossings sequentially through
-% time through each channel
-
-% At each strong threshold crossing: 
-
-% If ~res_bin(t,c)
-% >> Set res_bin(t,c)= 1  
-% >> Instantiate spk time weighting matrix >> spk_wt
-% >> Instantiate spk location matrix >> spk_loc
-% >> Calculate psi(t,c) --> See Rossant 2016
-% >> spk_wt = [t psi(t,c)] 
-% >> [spk_wt, spk_loc, res_bin] = floodfll(data, t, c, p, spk_wt, spk_loc, res_bin)
-% >> spk{1}(end+1) = sum((spk_wt(1,:).*spk_wt(2,:)).^p)/sum(spk_wt(2,:)).^p
-% >> spk{2}{end+1} = spk_loc
-
-%%%%%%%%%%%%%
-
-% FUNCTION 
-% FLOOD FILL 
-
-% Iterate through adjacent channels to see if it is greater than weak threshold crossing 
-% If greater than weak threshold crossing && ~res_bin(t,c)  
-% >> Calculate psi(t,c) --> See Rossant 2016
-% >> spk_wt(end+1, :) = [t psi(t,c)] --> See Rossant 2016 
-% >> spk_loc(end+1, :) = [t, c]
-% Set res_bin element to 1
-
-% Check next adjacent channel 
-% >> for adj(1,i) == c
-% >> >> if ~res_bin(t,i)
-% >> >> >> Call function on (t, i, spk_wt)
-% Check adjacent times 
-% >> If ~res_bin(t+1, c)
-% >> >> Call function on (t+1, c, spk_wt)
-% >> if ~res_bin(t-1, c)
-% >> >> Call function on (t-1, c, spk_wt) 
-
-%%%%%%%%%%%%%
-
-% set waveform duration/width -> wavedur
-% Iterate through each spk 
-% > Iterate each channel that the spike was detected on 
-% > > Extract the datapoints from center mass time to +- wavedur
-% > > if the channel is not captured on that channel, set to zeros by spk
-% width
-% OUTPUTS: 3d matrix, spike width x channel no x spike count 
-
-% Make a script with index and channel
-% Identifies spike near that channel
-% Plots all data around the spike across the channel
-% Plots weak, strong, center of mass, and loc points 
-% EDIT: Made the script but takes in a spkNo rather than time-chan pair
-
-% Power point of the algorithm 
-% Used as a presentation for the lab 
-% 1st slide? Rossant
-% 2nd slide? Block diagram of alg
-% Following slides? A block 
-
-
-% Try to end up with a 3 (pca components) x channel x spikes to cluster on
-
-
+function f = plotSpk(data, spk, numSpk, weak, strong)
+    
+    % Extracting x values out of spike 
+    spkCenter = spk{1}(numSpk);
+    xVals = min(spk{2}{numSpk}(:,1)):max(spk{2}{numSpk}(:,1)); 
+    
+    % Trimming data to xValues
+    data = data(xVals, :); 
+    
+    % Plotting data
+    f = plotData(data, weak, strong);
+    hold on 
+    
+    scatter((xVals(end)-xVals(0))/2, spk{2}{numSpk}(1,2), 500, 'x')
+    
+end
 
 
 
