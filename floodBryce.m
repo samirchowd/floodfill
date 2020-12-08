@@ -241,7 +241,7 @@ function f = plotSpks(data, spk, weak, strong)
     yPos = flipud([0;cumsum((1+Y_PAD)*2*ones(nChannels-1,1))]);
     ws = ws + yPos';
     
-    % NOTE: Change the for loop to work on the entire data set rather than
+    % TODO: Change the for loop to work on the entire data set rather than
     % a for loop.
     
     % Plotting the spk centers and points captured in each spk
@@ -328,8 +328,9 @@ end
 
 function f = plotSpk(data, spk, numSpk, weak, strong)
     
+    nChannels = size(data,2);
+
     % Extracting x values out of spike 
-    spkCenter = spk{1}(numSpk);
     xVals = min(spk{2}{numSpk}(:,1)):max(spk{2}{numSpk}(:,1)); 
     
     % Trimming data to xValues
@@ -338,8 +339,25 @@ function f = plotSpk(data, spk, numSpk, weak, strong)
     % Plotting data
     f = plotData(data, weak, strong);
     hold on 
+    Y_PAD = 0; 
     
-    scatter((xVals(end)-xVals(0))/2, spk{2}{numSpk}(1,2), 500, 'x')
+    % Getting shifted data 
+    % Normalizing the waveforms 
+    yAbsLim = max(abs(data),[],1);
+    ws = bsxfun(@rdivide, data, yAbsLim);
+    
+    % Applying a verticle offset to each channel and thresholds
+    yPos = flipud([0;cumsum((1+Y_PAD)*2*ones(nChannels-1,1))]);
+    ws = ws + yPos';
+    
+    % Plotting the voltage weighted spike centers
+    spkCenter = round((xVals(end)-xVals(1))/2);
+    chan = spk{2}{numSpk}(1,2);
+    scatter(spkCenter, ws(spkCenter, chan), 500, 'x');
+       
+    % Plotting the points captured by each spk
+    points = [spk{2}{numSpk}(:,1) , spk{2}{numSpk}(:,2)];
+    scatter(points(:,1)-min(xVals)+1, ws(sub2ind(size(ws), points(:,1)-min(xVals)+1, points(:,2))), 100, '.') % Subtract min of xVals to get adjusted xvalues
     
 end
 
