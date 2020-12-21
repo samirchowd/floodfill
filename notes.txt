@@ -1,0 +1,116 @@
+Notes regarding FloodFill Object + MATLAB to Python
+
+Flood Fill Object
+- Required Params
+- - Data (Should be pre processed, data points x channels, double)
+- - Adj Matrix (2 vectors, one to one mapping (i.e. 48x2))  
+- - Weak + Strong threshold (1 x channels) 
+
+- Desired Output
+- - spks 
+- - - 2 x N (# of spks) array
+- - - First row contains spk centers 
+- - - Second row contains an array of tc pairs corresponding to the spk center
+
+- Required Fields 
+- - ix (indicies of positive threshold crossings) 
+- - res_bin (binary matrix same size of data to mark visits)
+- - spk (1x2 cell array) 
+- - spk_wt (array containing voltage weighted values, 1 x # of points)
+- - spk_loc (array containing tc pairs, 1 x # of points) 
+
+- Required Functions
+- - Flood Fill (called by spk_detect, performs flood fil on a time point)
+- - - input: data^, adj^, t (time, int), c (channel, int), weak^, strong^
+- - - output: spk_wt^, spk_loc^, res_bin^ (updated for new visits) 
+- - psiG (called by flood fill, used to determine voltage weighted value)
+- - - input: data^, t^, c^, weak^, strong^ 
+- - - output: int
+
+==============================================================================
+
+# Pseudo Code for Flood Fill Object
+
+class FloodFill:
+
+	def __init__(self, data, adj, bandpass=(300,7500)):
+		# Initialize object variables to object
+
+	def detectSpikes(self, weak=[], strong=[]):
+		# Initialize object variables (spk, thresholds)
+
+		# Initialize local vars (i.e. res_bin, ix, p)
+
+
+		# Find positive crossings (w/ a diff like function) 
+
+		# Iterate through positive crossings 
+			# At each crossing, init spk_ix, spk_loc
+			# Call floodfill at each point (pass vars by reference)
+			# Append spk_ix and spk_loc to spk 
+
+
+		return spk 
+
+	def floodFill(self, t, c, spk_wt, spk_loc, res_bin):
+		
+		# Check for base cases
+		# Data out of bounds / Data already visited, break if true
+
+		# Calculate psi val, append it to spk_wt, mark point as visted in res_bin
+
+		# Iterate through adjacency matrix
+		# At each adjacent channel, recursively call floodfill 
+		
+		# Recursively call floodfill 1 timestep to the left and right
+
+		# Adjust this pseudocode to run iteratively ^ 
+
+		return spk_wt, spk_loc, res_bin 
+
+	def psiG(self, t, c):
+		# Calculate Rossant's formula 
+		return x 
+
+
+
+
+
+
+
+
+
+
+==============================================================================
+
+MATLAB to Python (?)
+
+- Tools needed in Python
+- - numpy for arrays
+- - matplotlib for plotting/visuals
+- - seaborn for cooler visuals ? 
+- - - is there any gap in functionality
+- - 
+
+- Advantages of Python
+- - Readability ?
+- - Zero based indexing 😎
+- - Has better data structures (i.e. dicitionaries, queues, etc.)
+- - OOP is simpler
+- - Python is free 
+- - Local functions not acessible in a file (less small files)
+- - import vs adding to path 
+- - More tools built for it 
+- - https://phillipmfeldman.org/Python/Advantages_of_Python_Over_Matlab.html
+
+- Advantages of MATLAB
+- - simulink is a thing
+- - only one version to keep updated with (python has several dependencies) 
+- - Really big community (mathworks forums) 
+- - Keeps everything in one language
+- - Code is already written in MATLAB, no need to translate 
+- - Lots of other useful libraries (lets solve some ODES) 
+
+
+
+

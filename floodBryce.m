@@ -1,6 +1,6 @@
 %%
 function [spk,wav] = floodBryce(data) 
-
+    v = 1; 
     % Loading data and instantiating objects 
     adj = load('adj');
     adj = adj.adj;
@@ -12,7 +12,7 @@ function [spk,wav] = floodBryce(data)
     
     % Performing algorithm and extracting templates 
     spk = detectSpk(data, adj, p, weak, strong);
-    wav = getWaves(data, spk, 30);
+    plotSpk(data, spk, 19, weak, strong, v)
 end
 %%
 
@@ -167,7 +167,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%% Data Visualization %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function f = plotData(data, weak, strong)
+function f = plotData(data, weak, strong, v)
     % Function used to plot the data as well as weak and strong values
     % INPUTS: data matrix, weak and strong threshold values
     % OUTPUT: A graph of data on each channel on a singular plot
@@ -206,11 +206,12 @@ function f = plotData(data, weak, strong)
     yTickLabel = cellfun(@num2str,flipud(num2cell(yTick)),'uni',false);
     
     % Plot
-    
     for ii = 1:size(ws,2)
         plot(f,ws(:,ii),'k')
-        plot([0,size(ws,1)],[stn(ii),stn(ii)],'-r')
-        plot([0,size(ws,1)],[wen(ii),wen(ii)],'-g')
+        if v > 0
+            plot([0,size(ws,1)],[stn(ii),stn(ii)],'--r')
+            plot([0,size(ws,1)],[wen(ii),wen(ii)],'--g')
+        end
     end
 
     set(f,'yTick',yTickPos)
@@ -326,7 +327,7 @@ function f = plotWave(wav, spkNo, strong, weak, spk, wavdur)
     
 end
 
-function f = plotSpk(data, spk, numSpk, weak, strong)
+function f = plotSpkIso(data, spk, numSpk, weak, strong)
     
     nChannels = size(data,2);
 
@@ -361,7 +362,69 @@ function f = plotSpk(data, spk, numSpk, weak, strong)
     
 end
 
+function f = plotSpk(data, spk, numSpk, weak, strong, v)
+    
+    nChannels = size(data,2);
 
+    % Extracting x values out of spike 
+    xVals = min(spk{2}{numSpk}(:,1)):max(spk{2}{numSpk}(:,1));  
+    
+    % Plotting data
+    f = plotData(data, weak, strong, v);
+    hold on 
+    Y_PAD = 0; 
+    
+    % Getting shifted data 
+    % Normalizing the waveforms 
+    yAbsLim = max(abs(data),[],1);
+    ws = bsxfun(@rdivide, data, yAbsLim);
+    
+    % Applying a verticle offset to each channel and thresholds
+    yPos = flipud([0;cumsum((1+Y_PAD)*2*ones(nChannels-1,1))]);
+    ws = ws + yPos';
+    
+    % Plotting the voltage weighted spike centers
+    spkCenter = round((xVals(end)+xVals(1))/2);
+    chan = spk{2}{numSpk}(1,2);
+    scatter(spkCenter, ws(spkCenter, chan), 1000, 'rx');
+       
+    % Plotting the points captured by each spk
+    points = [spk{2}{numSpk}(:,1) , spk{2}{numSpk}(:,2)];
+    scatter(points(:,1), ws(sub2ind(size(ws), points(:,1), points(:,2))), 100, 'b.') % Subtract min of xVals to get adjusted xvalues
+    
+end
+
+function f = plotEveryNthSpk(data, spk, n, weak, strong)
+    nChannels = size(data,2);
+    
+    % Plotting data
+    f = plotData(data, weak, strong);
+    hold on 
+    Y_PAD = 0; 
+    
+    % Getting shifted data 
+    % Normalizing the waveforms 
+    yAbsLim = max(abs(data),[],1);
+    ws = bsxfun(@rdivide, data, yAbsLim);
+    
+    % Applying a verticle offset to each channel and thresholds
+    yPos = flipud([0;cumsum((1+Y_PAD)*2*ones(nChannels-1,1))]);
+    ws = ws + yPos';
+    
+    % Plotting the spk centers and points captured in each spk
+    for i = 1:size(spk{1},2) % Iterating through each spk
+       % Plotting the voltage weighted spike centers
+       if(mod(i,n) == 0)
+        spkCenter = round(spk{1}(i));
+        chan = spk{2}{i}(1,2);
+        scatter(spkCenter, ws(spkCenter, chan), 500, 'x');
+       
+        % Plotting the points captured by each spk
+        points = [spk{2}{i}(:,1) , spk{2}{i}(:,2)];
+        scatter(points(:,1), ws(sub2ind(size(ws), points(:,1), points(:,2))), 100, '.')
+       end
+    end
+end
 
 
 
