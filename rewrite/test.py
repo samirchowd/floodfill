@@ -1,7 +1,8 @@
-import flood 
+from flood import FloodFill
 import numpy as np
 
-adj =  np.genfromtxt('adj.csv', delimiter=',')
+adj =  np.genfromtxt('adj.csv', delimiter=',',dtype=np.int32)
 data = np.genfromtxt('data.csv', delimiter=',')
 
-print(type(data), type(adj))
+spk_detector = FloodFill(data, adj)
+spk = spk_detector.detect_spikes()
