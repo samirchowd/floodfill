@@ -21,7 +21,7 @@ class FloodFill():
         res_bin = np.zeros(self.data.shape)
         
         # Finding positive crossings 
-        ix = self.cross_detect(self.strong)
+        ix = self.cross_detect()
         
         # Iterate through each positive crossing 
         for i in range(len(ix)):
@@ -78,8 +78,8 @@ class FloodFill():
         y = np.asarray([y[1] for y in spk_wt])
         return np.sum(np.power(x*y, self.p)) / np.sum(np.power(y, self.p))
         
-    def cross_detect(self, strong):
-        index = np.diff(np.sign(self.data-strong), axis=0) > 0
+    def cross_detect(self):
+        index = np.diff(np.sign(self.data-self.strong), axis=0) > 0
         ix = []
         # BC: Replace for loops with list-comprehension / lambda 
         for i in range(index.shape[1]):
