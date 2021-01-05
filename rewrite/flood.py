@@ -31,13 +31,13 @@ class FloodFill():
                     # Initialize result variables
                     spk_wt = []
                     spk_loc = []
-                    #print("BEFORE FLOOD FILL: ", spk_wt, spk_loc)
+
                     # Call flood_fill on strong crossing 
                     spk_wt, spk_loc, res_bin = self.flood_fill(t+1, i, spk_wt, spk_loc, res_bin)
-                    #print("AFTER FLOOD FILL: ", spk_wt, spk_loc)
+
                     # Calculate Voltage Weighted Spk Center 
                     spk_wt =  self.spk_center(spk_wt)
-                    print(spk_wt, end='\n')
+
                     # Append results to spk object 
                     self.spk.append((spk_wt, spk_loc))
                     
@@ -45,7 +45,7 @@ class FloodFill():
         
     def flood_fill(self, t, c, spk_wt, spk_loc, res_bin):
         
-        # Validating data 
+        # Validating data  
         if not self.validate_data(t, c, res_bin):
             return spk_wt, spk_loc, res_bin 
         
