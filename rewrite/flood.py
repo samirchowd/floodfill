@@ -1,5 +1,5 @@
 import numpy as np
-# Remove namespace np 
+import matplotlib.pyplot as plt 
 
 class FloodFill():
 
@@ -40,9 +40,16 @@ class FloodFill():
 
                     # Append results to spk object 
                     self.spk.append((spk_wt, spk_loc))
-    
         
-        return self.spk 
+        # Breaking up spks into spk times and spk locations 
+        spkTimes = np.asarray([spkT[0] for spkT in self.spk])
+        spkLocs = np.asarray([spkL[1] for spkL in self.spk])
+        
+        # Reformatting spk to be a numpy array 
+        tmp = np.asarray([np.asarray(x) for x in spkLocs])
+        self.spk = np.vstack((spkTimes, tmp))
+        
+        return self.spk
         
     def flood_fill(self, t, c, spk_wt, spk_loc, res_bin):
         
@@ -96,3 +103,48 @@ class FloodFill():
         
         return True 
         
+    def plotSpk(self, N):
+        # Setting up input
+        data = self.data.transpose()
+        spkTime, spkLoc = self.spk[0][N], self.spk[1][N]
+        chanFound = spkLoc[0][1]
+        spkTime = int(spkTime)
+        spkChans = set([x[1] for x in spkLoc])
+        
+        # Setting up grid 
+        fig, axs = plt.subplots(4,4)
+        fig.set_figheight(20)
+        fig.set_figwidth(20)
+        
+        # Loop variables 
+        count, minY, maxY = 0, float('inf'), -float('inf') 
+        
+        # Looping through all the channels 
+        for i in range(4):
+            for j in range(4):
+                # Black or Red if spiking or not 
+                if count in spkChans:
+                    axs[i][j].plot(data[count][spkTime-100:spkTime+100],'k')
+                else: 
+                    axs[i][j].plot(data[count][spkTime-100:spkTime+100],'r--')
+
+                # Plotting detected points 
+                detected_points = spkLoc[np.where(count == spkLoc[:,1])][:,0]
+                detected_data = data[count][detected_points]
+                adjusted_xVals = detected_points - spkTime + 100 
+                axs[i][j].scatter(adjusted_xVals, detected_data)
+                #print("CHANNEL {}: ".format(count), detected_points - spkTime + 100)
+
+                # Plotting thresholds 
+                axs[i][j].plot(np.arange(200), [self.weak]*200)
+                axs[i][j].plot(np.arange(200), [self.strong]*200)
+
+                # Updating min/max Y vals to keep uniform scale 
+                minY = min(min(data[count][spkTime-100:spkTime+100]),minY)
+                maxY = max(max(data[count][spkTime-100:spkTime+100]),maxY)
+                count+=1
+        
+        # Updating Y scale 
+        for i in range(4):
+            for j in range(4):
+                axs[i][j].set_ylim((minY-1, maxY+1))
