@@ -40,7 +40,8 @@ class FloodFill():
 
                     # Append results to spk object 
                     self.spk.append((spk_wt, spk_loc))
-                    
+    
+        
         return self.spk 
         
     def flood_fill(self, t, c, spk_wt, spk_loc, res_bin):
@@ -80,15 +81,8 @@ class FloodFill():
         
     def cross_detect(self):
         index = np.diff(np.sign(self.data-self.strong), axis=0) > 0
-        ix = []
-        # BC: Replace for loops with list-comprehension / lambda 
-        for i in range(index.shape[1]):
-            ix.append(np.where(index[:,i] == True))
-
-        for i in range(len(ix)):
-            ix[i] = ix[i][0]
         
-        return ix
+        return np.asarray([np.where(i == True)[0] for i in index.transpose()])
     
     # BC: Move this back into flood_fill, try using an assert 
     def validate_data(self, t, c, res_bin):
