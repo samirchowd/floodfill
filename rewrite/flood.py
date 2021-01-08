@@ -10,14 +10,13 @@ class FloodFill():
         self.bandpass = bandpass
 
     def detect_spikes(self, weakMul=2, strongMul=4):
-        # Initializing objkect varibles 
-        #BC: Change these to object vars, update rest of script 
+        # Initializing object varibles 
         self.spk = [] 
         self.sigma = np.median(np.absolute(self.data))/0.6745
         self.weak = weakMul*self.sigma
         self.strong = strongMul*self.sigma
         
-        # Initializing Local Variable 
+        # Initializing local variables 
         res_bin = np.zeros(self.data.shape)
         
         # Finding positive crossings 
@@ -59,9 +58,6 @@ class FloodFill():
             return spk_wt, spk_loc, res_bin 
         
         # Calulating psi value and appending it and the (t,c) to matricies 
-        # BC: Check append memory usage 
-        # SC: Append works in O(1) time, contiguous in memory. Could use deque if memory bottleneck but will
-        # be a HUGE pain to switched over to linked lists  
         spk_wt.append((t, self.psi(t, c)))
         spk_loc.append((t,c))
         
