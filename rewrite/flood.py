@@ -53,23 +53,32 @@ class FloodFill():
         
     def flood_fill(self, t, c, spk_wt, spk_loc, res_bin):
         
+        # TODO: SWITCH TO ASSERTS 
         # Validating data  
         if not self.validate_data(t, c, res_bin):
             return spk_wt, spk_loc, res_bin 
         
         # Calulating psi value and appending it and the (t,c) to matricies 
         # BC: Check append memory usage 
+        # SC: Append works in O(1) time, contiguous in memory. Could use deque if memory bottleneck but will
+        # be a HUGE pain to switched over to linked lists  
         spk_wt.append((t, self.psi(t, c)))
         spk_loc.append((t,c))
         
         res_bin[t][c] = 1
         
-        # TODO: Recursive Calls then switch to iterative
+        # BC: Recursion on hold until alg verified 
+        # TODO: Recursive Calls then switch to iterative 
+        # DIG DEEP INTO THIS 
         for tc in self.adj: 
             if c == (int(tc[0])-1): 
                 if not res_bin[t][tc[1]-1]:
                     spk_wt, spk_loc, res_bin = self.flood_fill(t, tc[1]-1, spk_wt, spk_loc, res_bin)
-                    
+        
+        
+        # TODO: Check these outputs for continuity '
+        # TODO: Refractory period = 1ms (30 samples), pass percentage of refr period and loop through checking that period 
+        # Sub weak from data points to check (forward and backward), check only weak crossers
         if not res_bin[t+1][c]:
             spk_wt, spk_loc, res_bin = self.flood_fill(t+1, c, spk_wt, spk_loc, res_bin)
         
@@ -92,6 +101,7 @@ class FloodFill():
         return np.asarray([np.where(i == True)[0] for i in index.transpose()])
     
     # BC: Move this back into flood_fill, try using an assert 
+    # SC: Assert will throw an error, we can try-catch the error. Is this something we want to do? 
     def validate_data(self, t, c, res_bin):
         timeBound = self.data.shape[0]-1
         chanBound = self.data.shape[1]-1
@@ -103,8 +113,10 @@ class FloodFill():
         
         return True 
         
-    def plotSpk(self, N):
+    def plotSpk(self, N, threshold=True, save=False, fname=""):
         # Setting up input
+        if not fname: 
+            fname = "spk_{}".format(N)
         data = self.data.transpose()
         spkTime, spkLoc = self.spk[0][N], self.spk[1][N]
         chanFound = spkLoc[0][1]
@@ -127,7 +139,8 @@ class FloodFill():
                     axs[i][j].plot(data[count][spkTime-100:spkTime+100],'k')
                 else: 
                     axs[i][j].plot(data[count][spkTime-100:spkTime+100],'r--')
-
+                
+                # TODO: Add channel # to each plot 
                 # Plotting detected points 
                 detected_points = spkLoc[np.where(count == spkLoc[:,1])][:,0]
                 detected_data = data[count][detected_points]
@@ -136,8 +149,9 @@ class FloodFill():
                 #print("CHANNEL {}: ".format(count), detected_points - spkTime + 100)
 
                 # Plotting thresholds 
-                axs[i][j].plot(np.arange(200), [self.weak]*200)
-                axs[i][j].plot(np.arange(200), [self.strong]*200)
+                if threshold:
+                    axs[i][j].plot(np.arange(200), [self.weak]*200)
+                    axs[i][j].plot(np.arange(200), [self.strong]*200)
 
                 # Updating min/max Y vals to keep uniform scale 
                 minY = min(min(data[count][spkTime-100:spkTime+100]),minY)
@@ -148,3 +162,43 @@ class FloodFill():
         for i in range(4):
             for j in range(4):
                 axs[i][j].set_ylim((minY-1, maxY+1))
+        
+        if save:
+            plt.savefig(fname)
+    
+"""
+THINGS TO CHECK
+
+IF ALG IS WRONG
+Check return vals
+Check validation case 
+* Print out all the values that are being passed
+* By hand, compare them to what should not count, and what should. Check to see if there's any discrepancy 
+* print(failed: xyz) or print(good: xyz)
+Check if iterating through adjaceny is correct
+* print(checking channel x from  channel y)
+* Compare that against adj matrix 
+Make sure spk_loc is correct 
+* take every point in spk loc and compare it to weak, if all > weak good, if not bad 
+Check spk_center function (compare by hand)
+* do a set of points by hand, then plug it into spk_center, see if the same 
+Check the plotting 
+* 
+Check Strong crossings 
+Check PSI 
+
+
+IF ALG IS CORRECT 
+Compare to Rossant
+Try going out multiple time poitns
+Play with threshold values 
+Try absolute value of data (if rossant doesn't specify)
+
+Think about spikes separated in space but not in time, alg cannot seperate 
+
+Write unit tests basically 
+
+TRY:
+plot a spk, check for other spks near by (in a refr period?) plot them as well 
+
+"""
