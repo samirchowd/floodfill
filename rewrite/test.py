@@ -2,29 +2,40 @@ from flood import FloodFill
 import numpy as np
 import time 
 from tqdm import trange 
+import matplotlib.pyplot as plt 
 
-adj =  np.genfromtxt('adj.csv', delimiter=',',dtype=np.int32)
-data = np.genfromtxt('data.csv', delimiter=',')
-
-ff  = FloodFill(data, adj) 
+def gen_dummy_data():
+    # TODO: Paramterize this so it can change size, perhaps function o_O
+    return np.asarray([np.sin(np.arange(0,100,.1))]*16).transpose()
+    
+def gen_dummy_adj():
+    # TODO: No clue, this is hard coded
+    tmp = []
+    for i in range(1,16,2):
+        tmp.append([i-1, i])
+        tmp.append([i, i-1])
+    return np.asarray(tmp)
 
 class Test():
     
-    def __init__(self, floodfill=None, v=0)
-        if floodfill:
-            self.ff = FloodFill(floodfill)
-        else:
-            self.ff = FloodFill(gen_dummy_data(), gen_dummy_adj)
+    def __init__(self, floodfill=None, v=0):
+        self.ff = FloodFill(gen_dummy_data(), gen_dummy_adj(), debug = True)
         self.v = v 
     
     def check_detect_spikes(self):
-        pass
+        spk = self.ff.detect_spikes()
+        fig = self.ff.plotSpk(100)
+        plt.show()
     
     def check_flood_fill(self):
         pass
     
     def check_psi(self):
-        pass
+        # Checking < 1
+        assert self.ff.psi(0, 0) == -0.5 
+        
+        # Checking > 1 
+        assert self.ff.psi(50,0) == 1
     
     def check_spk_center(self):
         pass
@@ -33,24 +44,7 @@ class Test():
         pass
     
     def check_validate_data(self):
-        # Testing data is out of bounds 
-        
-    # Helper Methods
-    def gen_dummy_data():
-        # TODO: Paramterize this so it can change size, perhaps function o_O
-        return np.asarray([np.cos(np.arange(0,100,.1))]*16).transpose()
-    
-    def gen_dummy_adj():
-        # TODO: No clue, this is hard coded
-        tmp = []
-        for i in range(1,16,2):
-            tmp.append([i-1, i])
-            tmp.append([i, i-1])
-        return np.asarray(tmp)
-        
-    
-        
-        
+        pass        
     
 
 if __name__ == "__main__":
@@ -66,20 +60,17 @@ if __name__ == "__main__":
     if v:
         print("Instantiating test object")
     test = Test(v = 1) 
-    if v: 
-        # TODO: Add test params to this list 
-        print("Test object initiated with following params: ")
 
     if v: 
         print("Running tests...")
     
-    # check_detect_spiks()
+    # check_detect_spikes()
     if v:
         print("Testing floodfill.detect_spikes...")
     try:
-        pass
+        test.check_detect_spikes()
     except AssertionError: 
-        pass 
+        print("Failed on floodfill.detect_spikes...")
     
     # check_flood_fill()
     if v: 
@@ -87,15 +78,15 @@ if __name__ == "__main__":
     try:
         pass
     except AssertionError:
-        pass
+        print("Failed on floodfill.flood_fill...")
     
     # check_psi()
     if v:
         print("Testing floodfill.psi...")
     try:
-        pass
+        test.check_psi()
     except AssertionError:
-        pass
+        print("Failed on floodfill.psi...")
     
     # check_spk_center()
     if v:
@@ -103,7 +94,7 @@ if __name__ == "__main__":
     try:
         pass
     except AssertionError:
-        pass 
+        print("Failed on floodfill.spk_center...")
     
     # check_cross_detect()
     if v:
@@ -111,7 +102,7 @@ if __name__ == "__main__":
     try:
         pass
     except AssertionError:
-        pass 
+        print("Failed on floodfill.check_cross_detect...")
     
     # check_validate_data()
     if v:
@@ -119,4 +110,4 @@ if __name__ == "__main__":
     try:
         pass
     except AssertionError:
-        pass 
+        print("Failed on testing floodfill.validate_data")

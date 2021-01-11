@@ -3,11 +3,12 @@ import matplotlib.pyplot as plt
 
 class FloodFill():
 
-    def __init__(self, data, adj, p = 1, bandpass=(300,7500)):
+    def __init__(self, data, adj, p = 1, bandpass=(300,7500), debug=False):
         self.data = data
         self.adj = adj
         self.p = 1
         self.bandpass = bandpass
+        self.debug = debug
 
     def detect_spikes(self, weakMul=2, strongMul=4):
         # Initializing object varibles 
@@ -15,6 +16,9 @@ class FloodFill():
         self.sigma = np.median(np.absolute(self.data))/0.6745
         self.weak = weakMul*self.sigma
         self.strong = strongMul*self.sigma
+        if self.debug:
+            self.weak = float(input("Please enter a value for the weak threshold: "))
+            self.strong = float(input("Please enter a value for the strong threshold: "))
         
         # Initializing local variables 
         res_bin = np.zeros(self.data.shape)
@@ -67,9 +71,13 @@ class FloodFill():
         # TODO: Recursive Calls then switch to iterative 
         # DIG DEEP INTO THIS 
         for tc in self.adj: 
-            if c == (int(tc[0])-1): 
-                if not res_bin[t][tc[1]-1]:
-                    spk_wt, spk_loc, res_bin = self.flood_fill(t, tc[1]-1, spk_wt, spk_loc, res_bin)
+            #TODO: ADJUST ADJACENCY MATRIX TO BE ENTIRELY ZERO INDEXED 
+            if c == (int(tc[0])): 
+                # TODO: ADJUST ADJACENCY MATRIX TO BE ENTIRELY ZERO INDEXED
+                if not res_bin[t][tc[1]]:
+                    # TODO: ADJUST ADJACENCY MATRIX TO BE ENTIRELY ZERO INDEXED
+                    #print("Adj Spike: From {} to {} @ {}".format(c, tc[1], t))
+                    spk_wt, spk_loc, res_bin = self.flood_fill(t, tc[1], spk_wt, spk_loc, res_bin)
         
         
         # TODO: Check these outputs for continuity '
@@ -136,7 +144,6 @@ class FloodFill():
                 else: 
                     axs[i][j].plot(data[count][spkTime-100:spkTime+100],'r--')
                 
-                # TODO: Add channel # to each plot 
                 # Plotting detected points 
                 detected_points = spkLoc[np.where(count == spkLoc[:,1])][:,0]
                 detected_data = data[count][detected_points]
@@ -152,6 +159,15 @@ class FloodFill():
                 # Updating min/max Y vals to keep uniform scale 
                 minY = min(min(data[count][spkTime-100:spkTime+100]),minY)
                 maxY = max(max(data[count][spkTime-100:spkTime+100]),maxY)
+                
+                # Labeling each axis with its channel name 
+                axs[i][j].set_title("Channel {}".format(count))
+                
+                # Plotting Spike Center 
+                if count == chanFound: 
+                    axs[i][j].scatter(100,data[chanFound][spkTime],marker='x')
+                
+                # Updating counter
                 count+=1
         
         # Updating Y scale 
@@ -161,6 +177,12 @@ class FloodFill():
         
         if save:
             plt.savefig(fname)
+        
+        # If in debug mode
+        if self.debug:
+            print("Spike Time: {}\n Channel Spike Found On: {}\n Spk Locations: {} ".format(spkTime, chanFound, "None for brevity"))
+        
+        return fig, axs
     
 """
 THINGS TO CHECK
