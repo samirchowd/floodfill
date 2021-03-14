@@ -10,12 +10,13 @@ class FloodFill():
         self.bandpass = bandpass
         self.debug = debug
 
-    def detect_spikes(self, weakMul=2, strongMul=4):
+    def detect_spikes(self, weakMul=2, strongMul=4, refr = 30):
         # Initializing object varibles 
         self.spk = [] 
         self.sigma = np.median(np.absolute(self.data))/0.6745
         self.weak = weakMul*self.sigma
         self.strong = strongMul*self.sigma
+        self.refr = refr
         if self.debug:
             self.weak = float(input("Please enter a value for the weak threshold: "))
             self.strong = float(input("Please enter a value for the strong threshold: "))
@@ -54,7 +55,7 @@ class FloodFill():
         
         return self.spk
         
-    def flood_fill(self, t, c, spk_wt, spk_loc, res_bin):
+    def flood_fill(self, t, c, spk_wt, spk_loc, res_bin, recursive=True):
         
         # TODO: SWITCH TO ASSERTS 
         # Validating data  
@@ -71,26 +72,14 @@ class FloodFill():
         # TODO: Recursive Calls then switch to iterative 
         # DIG DEEP INTO THIS 
         for tc in self.adj: 
-            #TODO: ADJUST ADJACENCY MATRIX TO BE ENTIRELY ZERO INDEXED 
-            if c == (int(tc[0])): 
-                # TODO: ADJUST ADJACENCY MATRIX TO BE ENTIRELY ZERO INDEXED
+            if c == (int(tc[0])) and recursive: 
                 if not res_bin[t][tc[1]]:
-                    # TODO: ADJUST ADJACENCY MATRIX TO BE ENTIRELY ZERO INDEXED
-                    #print("Adj Spike: From {} to {} @ {}".format(c, tc[1], t))
-                    spk_wt, spk_loc, res_bin = self.flood_fill(t, tc[1], spk_wt, spk_loc, res_bin)
+                    spk_wt, spk_loc, res_bin = self.flood_fill(t, tc[1], spk_wt, spk_loc, res_bin, recursive = True)
         
-        z = 1
-        # TODO: Check these outputs for continuity '
-        # TODO: Refractory period = 1ms (30 samples), pass percentage of refr period and loop through checking that period 
-        # Sub weak from data points to check (forward and backward), check only weak crossers
-        # Turn t -> ts, if any ts > threshold and not checked, run ff on each t and ts = [x,y,z], ts relative to current t (like an offset)
-        # Parameterize range of ts by refr viols (generally ts should be +- 30, param for % of 30 (i.e. 30%, 60%, etc.))
-        if not res_bin[t+z][c]:
-            spk_wt, spk_loc, res_bin = self.flood_fill(t+z, c, spk_wt, spk_loc, res_bin)
+        for i in range(t-self.refr,t+self.refr):
+            if not res_bin[i][c] and recursive:
+                spk_wt, spk_loc, res_bin = self.flood_fill(i, c, spk_wt, spk_loc, res_bin, recursive=True)
         
-        if not res_bin[t-z][c]:
-            spk_wt, spk_loc, res_bin = self.flood_fill(t-z, c, spk_wt, spk_loc, res_bin)
-            
         return spk_wt, spk_loc, res_bin 
         
     def psi(self, t, c):
@@ -114,13 +103,61 @@ class FloodFill():
         if t < 0 or t > timeBound or c < 0 or c > chanBound:
             return False 
         
-        if self.data[t,c] <= self.weak or res_bin[t,c]:
+        if abs(self.data[t,c]) <= self.weak or res_bin[t,c]:
             return False
         
         return True 
-        
-    def plotSpk(self, N, threshold=True, save=False, fname=""):
+    
+    def getWave(self, wavDur, seed=False):
         # Setting up input
+        if seed:
+            np.random.seed(1738)
+        
+        # Setting up waveform array
+        waves = [] 
+        for N in range(len(self.spk[0])):
+            tmp = []
+            spkTime, spkLoc = self.spk[0][N], self.spk[1][N]
+            spkTime = int(spkTime)
+            spkChans = set([x[1] for x in spkLoc])
+            for chan in range(self.data.shape[1]):
+                if chan in spkChans:
+                    tmp.extend(self.data[spkTime-wavDur:spkTime+wavDur,chan])
+                else:
+                    tmp.extend(np.random.randn(2*wavDur))
+            waves.append(tmp)
+        self.waves = waves
+        return waves
+        
+#         data = self.data.transpose()
+#         arWavs = np.zeros(shape=(self.data.shape[1]*wavDur, len(self.spk[0]))) 
+        
+#         # Looping through all the channels 
+#         for N in range(len(self.spk[0])):
+#             spkTime, spkLoc = self.spk[0][N], self.spk[1][N]
+#             spkTime = int(spkTime)
+#             spkChans = set([x[1] for x in spkLoc])
+#             for i in range(self.data.shape[1]):
+#                 if i in spkChans:
+#                     arWavs[i*wavDur:(i+1)*wavDur-1][N] = (data[i][spkTime-wavDur//2:spkTime+wavDur//2])
+#                 else: 
+#                     arWavs[i*wavDur:(i+1)*wavDur-1][N] = (np.random.randn(wavDur))
+ 
+        
+#         return arWavs
+    
+    def plotWaves(self, N, wavDur):
+        wf = self.waves[N]
+        curr = 0
+        for i in range(self.data.shape[1]):
+            plt.plot(range(curr,curr+wavDur), wf[curr:curr+wavDur])
+            curr += wavDur
+        
+        
+    def plotSpk(self, N, threshold=True, save=False, wf = False, seed=False, fname=""):
+        # Setting up input
+        if seed:
+            np.random.seed(1738)
         if not fname: 
             fname = "spk_{}".format(N)
         data = self.data.transpose()
@@ -144,7 +181,10 @@ class FloodFill():
                 if count in spkChans:
                     axs[i][j].plot(data[count][spkTime-100:spkTime+100],'k')
                 else: 
-                    axs[i][j].plot(data[count][spkTime-100:spkTime+100],'r--')
+                    if wf: 
+                        axs[i][j].plot(np.random.randn(200), 'k')
+                    else: 
+                        axs[i][j].plot(data[count][spkTime-100:spkTime+100],'r--')
                 
                 # Plotting detected points 
                 detected_points = spkLoc[np.where(count == spkLoc[:,1])][:,0]
@@ -157,6 +197,8 @@ class FloodFill():
                 if threshold:
                     axs[i][j].plot(np.arange(200), [self.weak]*200)
                     axs[i][j].plot(np.arange(200), [self.strong]*200)
+                    axs[i][j].plot(np.arange(200), [-1*self.weak]*200)
+                    axs[i][j].plot(np.arange(200), [-1*self.strong]*200)
 
                 # Updating min/max Y vals to keep uniform scale 
                 minY = min(min(data[count][spkTime-100:spkTime+100]),minY)
