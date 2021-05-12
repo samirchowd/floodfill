@@ -1,3 +1,6 @@
+import numpy as np 
+import matplotlib.pyplot as plt
+
 class vis():
     
     def __init__(self, ff):
@@ -30,7 +33,7 @@ class vis():
         return fig, axs
 
 
-    def plot_dummy_data(self):
+    def plot_data(self):
         data = self.ff.data.transpose()
         fig, axs = plt.subplots(4,4)
         fig.set_figheight(20)
@@ -72,7 +75,7 @@ class vis():
         if not fname: 
             fname = "spk_{}".format(N)
         data = self.ff.data.transpose()
-        spkTime, spkLoc = self.spk[0][N], self.spk[1][N]
+        spkTime, spkLoc = self.ff.spk[0][N], self.ff.spk[1][N]
         chanFound = spkLoc[0][1]
         spkTime = int(spkTime)
         spkChans = set([x[1] for x in spkLoc])
@@ -106,10 +109,10 @@ class vis():
 
                 # Plotting thresholds 
                 if threshold:
-                    axs[i][j].plot(np.arange(200), [self.weak]*200)
-                    axs[i][j].plot(np.arange(200), [self.strong]*200)
-                    axs[i][j].plot(np.arange(200), [-1*self.weak]*200)
-                    axs[i][j].plot(np.arange(200), [-1*self.strong]*200)
+                    axs[i][j].plot(np.arange(200), [self.ff.weak]*200)
+                    axs[i][j].plot(np.arange(200), [self.ff.strong]*200)
+                    axs[i][j].plot(np.arange(200), [-1*self.ff.weak]*200)
+                    axs[i][j].plot(np.arange(200), [-1*self.ff.strong]*200)
 
                 # Updating min/max Y vals to keep uniform scale 
                 minY = min(min(data[count][spkTime-100:spkTime+100]),minY)
@@ -132,9 +135,5 @@ class vis():
         
         if save:
             plt.savefig(fname)
-        
-        # If in debug mode
-        if self.debug:
-            print("Spike Time: {}\n Channel Spike Found On: {}\n Spk Locations: {} ".format(spkTime, chanFound, "None for brevity"))
         
         return fig, axs

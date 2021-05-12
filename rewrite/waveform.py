@@ -1,3 +1,4 @@
+import numpy as np
 class waveforms():
     
     def __init__(self, data, spk_times, spk_chans):
@@ -35,7 +36,7 @@ class waveforms():
         
         # Setting up waveform array
         waves = [] 
-        for N in range(len(self.spk[0])):
+        for N in range(len(self.spk_centers)):
             tmp = []
             spkTime, spkLoc = self.spk_centers[N], self.spk_chans[N]
             spkTime = int(spkTime)
