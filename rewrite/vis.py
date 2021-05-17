@@ -3,35 +3,9 @@ import matplotlib.pyplot as plt
 
 class vis():
     
-    def __init__(self, ff):
+    def __init__(self, ff, waves=None):
         self.ff = ff
-    
-    
-    def plot_waveforms(self):
-        wave = self.ff.data.transpose()
-        fig, axs = plt.subplots(4,4)
-        fig.set_figheight(20)
-        fig.set_figwidth(20)
-        plt.grid=True
-    
-        # Loop variables 
-        count, minY, maxY = 0, float('inf'), -float('inf') 
-
-        for i in range(4):
-            for j in range(4):
-                axs[i][j].plot(wave[count])
-                minY = min(min(wave[count]),minY)
-                maxY = max(max(wave[count]),maxY)
-                count += 1
-
-        # Updating Y scale 
-        for i in range(4):
-            for j in range(4):
-                axs[i][j].set_ylim((minY-1, maxY+1))
-
-        plt.show()
-        return fig, axs
-
+        self.wf = waves
 
     def plot_data(self):
         data = self.ff.data.transpose()
@@ -61,7 +35,7 @@ class vis():
     
     
     def plot_waves(self, N, wavDur):
-        wf = self.ff.waves[N]
+        wf = self.wf.waves[N]
         curr = 0
         for i in range(self.ff.data.shape[1]):
             plt.plot(range(curr,curr+wavDur), wf[curr:curr+wavDur])
@@ -137,3 +111,65 @@ class vis():
             plt.savefig(fname)
         
         return fig, axs
+    
+    def pca_vis(self):
+        from sklearn.decomposition import PCA
+        waves = self.wf.waves
+        pca = PCA(n_components=3, whiten= True)
+        pca.fit(waves)
+        pca_data = pca.transform(waves)
+        plt.scatter(pca_data[:, 0], pca_data[:, 1], 10, alpha = 0.2)
+        plt.show()
+        
+    def clus_vis(self, K):
+        plt.figure()
+        labels = self.wf.clus.labels_
+        
+        from sklearn.decomposition import PCA
+        pca = PCA(n_components=3, whiten= True)
+        pca.fit(self.wf.waves)
+        pca_data = pca.transform(self.wf.waves)
+        
+        for i in range(K):
+            ixs = labels == i 
+            x = pca_data[ixs,0]
+            y = pca_data[ixs,1]
+            plt.scatter(x,y)
+    
+    def data_spk_vis(self):
+        plt.figure() 
+        rowHeight = 50
+        rowOffset = 60 
+        for i in range(self.ff.data.shape[1]):
+            tmpData = self.ff.data[:, i]
+            maxH, minH = max(tmpData), min(tmpData)
+            b = (tmpData - np.min(tmpData))/np.ptp(tmpData)
+            b *= rowHeight
+            b += i * rowOffset
+            plt.plot(b)
+        
+        labels = self.wf.clus.labels_
+        for i in range(5):
+            ixs = labels == i 
+            spkOfI = self.ff.spk[0][ixs]
+            plt.scatter(spkOfI, [self.ff.data.shape[1]*rowOffset*1.1+(i*25)]*len(spkOfI))
+
+        x = [a[0][0] for a in self.ff.spk[1]]
+        y = [a[0][1]*rowOffset+rowHeight/2 for a in self.ff.spk[1]]
+        plt.scatter(x,y, marker ='+')
+        
+    def elbow_plot(self):
+        waves = self.wf.waves
+        distortions = []
+        K = range(1,10)
+        for k in K:
+            kmeanModel = KMeans(n_clusters=k)
+            kmeanModel.fit(waves)
+            distortions.append(kmeanModel.inertia_)
+ 
+        plt.plot(K, distortions, 'bx-')
+        plt.xlabel('k')
+        plt.ylabel('Distortion')
+        plt.title('The Elbow Method showing the optimal k')
+        plt.show()
+    

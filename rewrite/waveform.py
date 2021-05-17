@@ -74,7 +74,7 @@ class waveforms():
         
         return clus 
 
-    def _waveshift(self, n):
+    def _waveshift(self, n, wavDur=100, sr=30000):
         '''
         Returns the realigned waveforms 
 
@@ -118,13 +118,6 @@ class waveforms():
         from scipy import signal 
         newWavs = []
         labels = clus.labels_ 
-
-        if vis:
-            for i in range(1,max(labels)+1):
-                ixs = labels == i 
-                x = pca_data[ixs,0]
-                y = pca_data[ixs,1]
-                plt.scatter(x,y)
 
         for i in range(max(labels)+1):
             # Getting all the waveforms to a specific cluster 
